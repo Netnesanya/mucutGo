@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log" // Ensure logging is imported
+	"log"
 	"mucutGo/internal/yt"
 	"net/http"
 	"strings"
