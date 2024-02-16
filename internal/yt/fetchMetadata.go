@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
-	"time"
 )
 
 type VideoHeatmap struct {
@@ -17,7 +16,7 @@ type VideoHeatmap struct {
 
 type VideoMetadata struct {
 	Title          string         `json:"title"`
-	Duration       int            `json:"duration"`        // Assuming duration is in seconds
+	Duration       float32        `json:"duration"`        // Assuming duration is in seconds
 	DurationString string         `json:"duration_string"` // This might need to be calculated separately if not provided directly
 	Heatmap        []VideoHeatmap `json:"heatmap"`
 	OriginalUrl    string         `json:"original_url"`
@@ -25,7 +24,7 @@ type VideoMetadata struct {
 
 // FetchVideoMetadata takes a list of video titles and fetches their metadata using yt-dlp.
 func FetchVideoMetadata(titles []string) ([]VideoMetadata, error) {
-	var metadataList []VideoMetadata // A slice to hold arbitrary JSON objects
+	var metadataList []VideoMetadata
 
 	for _, title := range titles {
 		cmdArgs := []string{
@@ -49,22 +48,22 @@ func FetchVideoMetadata(titles []string) ([]VideoMetadata, error) {
 			continue // Skip this iteration on error
 		}
 
-		if len(metadataList) == 0 {
-			return nil, fmt.Errorf("no metadata could be fetched for the given titles")
-		}
-
 		metadataList = append(metadataList, videoMeta)
 	}
 
-	DownloadAudioFromMetadata(metadataList)
+	// Consider error handling if no metadata could be fetched.
+	if len(metadataList) == 0 {
+		return nil, fmt.Errorf("no metadata could be fetched for the given titles")
+	}
+
 	writeMetadataToFile(metadataList, "metadata.json")
 	return metadataList, nil
 }
 
 func DownloadAudioFromMetadata(metadataList []VideoMetadata) {
 	for _, metadata := range metadataList {
-		startTime, endTime := FindHeatmapSpike(metadata.Heatmap)
-		fileName := fmt.Sprintf("%s-%s.mp3", metadata.Title, time.Now().Format("20060102150405"))
+		startTime, endTime := FindHeatmapSpike(metadata.Heatmap, metadata.Duration)
+		fileName := fmt.Sprintf("%s.mp3", metadata.Title)
 		outputPath := fmt.Sprintf("downloads/%s", fileName)
 
 		log.Printf("Downloading audio segment for '%s'", metadata.Title)
