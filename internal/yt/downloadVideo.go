@@ -5,14 +5,6 @@ import (
 	"os/exec"
 )
 
-//func DownloadVideo(url string, heatmap []VideoHeatmap) error {
-//	startTime, endTime := FindHeatmapSpike(heatmap)
-//	if err := DownloadAudioSegment(url, startTime, endTime, "/"); err != nil {
-//		return err
-//	}
-//	return nil
-//}
-
 func FindHeatmapSpike(heatmap []VideoHeatmap, duration float32) (startTime, endTime float32) {
 	if len(heatmap) == 0 {
 		return 0, 0 // Return immediately if heatmap is empty
