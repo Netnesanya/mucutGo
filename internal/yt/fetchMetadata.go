@@ -25,7 +25,7 @@ type VideoMetadata struct {
 
 // FetchVideoMetadata takes a list of video titles and fetches their metadata using yt-dlp.
 func FetchVideoMetadata(titles []string) ([]VideoMetadata, error) {
-	var metadataList []VideoMetadata // A slice to hold arbitrary JSON objects
+	var metadataList []VideoMetadata
 
 	for _, title := range titles {
 		cmdArgs := []string{
@@ -49,14 +49,14 @@ func FetchVideoMetadata(titles []string) ([]VideoMetadata, error) {
 			continue // Skip this iteration on error
 		}
 
-		if len(metadataList) == 0 {
-			return nil, fmt.Errorf("no metadata could be fetched for the given titles")
-		}
-
 		metadataList = append(metadataList, videoMeta)
 	}
 
-	DownloadAudioFromMetadata(metadataList)
+	// Consider error handling if no metadata could be fetched.
+	if len(metadataList) == 0 {
+		return nil, fmt.Errorf("no metadata could be fetched for the given titles")
+	}
+
 	writeMetadataToFile(metadataList, "metadata.json")
 	return metadataList, nil
 }
