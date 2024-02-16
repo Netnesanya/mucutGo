@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
-	"time"
 )
 
 type VideoHeatmap struct {
@@ -17,7 +16,7 @@ type VideoHeatmap struct {
 
 type VideoMetadata struct {
 	Title          string         `json:"title"`
-	Duration       int            `json:"duration"`        // Assuming duration is in seconds
+	Duration       float32        `json:"duration"`        // Assuming duration is in seconds
 	DurationString string         `json:"duration_string"` // This might need to be calculated separately if not provided directly
 	Heatmap        []VideoHeatmap `json:"heatmap"`
 	OriginalUrl    string         `json:"original_url"`
@@ -63,8 +62,8 @@ func FetchVideoMetadata(titles []string) ([]VideoMetadata, error) {
 
 func DownloadAudioFromMetadata(metadataList []VideoMetadata) {
 	for _, metadata := range metadataList {
-		startTime, endTime := FindHeatmapSpike(metadata.Heatmap)
-		fileName := fmt.Sprintf("%s-%s.mp3", metadata.Title, time.Now().Format("20060102150405"))
+		startTime, endTime := FindHeatmapSpike(metadata.Heatmap, metadata.Duration)
+		fileName := fmt.Sprintf("%s.mp3", metadata.Title)
 		outputPath := fmt.Sprintf("downloads/%s", fileName)
 
 		log.Printf("Downloading audio segment for '%s'", metadata.Title)
