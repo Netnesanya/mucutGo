@@ -3,20 +3,20 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"mucutGo/internal/yt"
 	"net/http"
 	"strings"
 )
 
-func VideoTitlesHandler(w http.ResponseWriter, r *http.Request) {
+func VideoInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading request body: %v", err) // Log the error
 		http.Error(w, "Error reading request body", http.StatusInternalServerError)
@@ -35,7 +35,6 @@ func VideoTitlesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	yt.DownloadAudioFromMetadata(metadata) // Download audio from metadata
 	// If no metadata is returned, it might be useful to log this as a separate case
 	if len(metadata) == 0 {
 		log.Printf("No metadata fetched for titles: %v", titles)                 // This could indicate an issue with yt-dlp or the input titles
@@ -52,4 +51,39 @@ func VideoTitlesHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(responseData)
+}
+
+func Mp3DownloadBulkHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var metadata []yt.VideoMetadata
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading request body: %v", err)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	// Unmarshal the JSON body into the metadata slice
+	if err := json.Unmarshal(body, &metadata); err != nil {
+		log.Printf("Error unmarshaling request body: %v", err)
+		http.Error(w, "Error processing request body", http.StatusBadRequest)
+		return
+	}
+
+	// Now that you have the metadata, you can pass it to your download function
+	err = yt.DownloadAudioFromMetadata(metadata)
+	if err != nil {
+		log.Printf("Error downloading audio from metadata: %v", err)
+		http.Error(w, "Error downloading audio", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Audio download initiated successfully"))
 }
