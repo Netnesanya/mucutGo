@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"mucutGo/internal/siq"
 	"mucutGo/internal/yt"
 	"net/http"
 	"strings"
@@ -149,6 +150,18 @@ func Mp3UpdateMetadataHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(updatedMetadataJSON)
+}
+
+func CreateSiqHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := siq.CreateSIQPackage()
+	if err != nil {
+		fmt.Println("Error creating package.siq", err)
+	}
 }
 
 func Mp3UpdateMetadataBulkHandler(w http.ResponseWriter, r *http.Request) {
