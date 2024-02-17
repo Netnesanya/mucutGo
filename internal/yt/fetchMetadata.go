@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"strings"
 )
 
 type VideoHeatmap struct {
@@ -60,19 +61,29 @@ func FetchVideoMetadata(titles []string) ([]VideoMetadata, error) {
 	return metadataList, nil
 }
 
-func DownloadAudioFromMetadata(metadataList []VideoMetadata) {
+func DownloadAudioFromMetadata(metadataList []VideoMetadata) error {
+	var errorMessages []string // Collect error messages here
+
 	for _, metadata := range metadataList {
 		startTime, endTime := FindHeatmapSpike(metadata.Heatmap, metadata.Duration)
-		fileName := fmt.Sprintf("%s.mp3", metadata.Title)
+		fileName := fmt.Sprintf("%s.mp3", metadata.Title) // Sanitize to ensure valid filenames
 		outputPath := fmt.Sprintf("downloads/%s", fileName)
 
 		log.Printf("Downloading audio segment for '%s'", metadata.Title)
 		err := DownloadAudioSegment(metadata.OriginalUrl, startTime, endTime, outputPath)
 		if err != nil {
-			log.Printf("Error downloading audio segment for '%s': %v", metadata.Title, err)
+			errorMessage := fmt.Sprintf("Error downloading audio segment for '%s': %v", metadata.Title, err)
+			log.Print(errorMessage)
+			errorMessages = append(errorMessages, errorMessage)
 			continue // Skip this iteration on error
 		}
 	}
+
+	if len(errorMessages) > 0 {
+		return fmt.Errorf("errors occurred during downloads: %s", strings.Join(errorMessages, "; "))
+	}
+
+	return nil
 }
 
 func writeMetadataToFile(metadataList []VideoMetadata, filePath string) error {
