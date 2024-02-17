@@ -28,7 +28,7 @@ func VideoInfoHandler(w http.ResponseWriter, r *http.Request) {
 	titles := strings.Split(string(body), "\n")
 
 	// Prefetch video data
-	metadata, err := yt.FetchVideoMetadata(titles)
+	metadata, err := yt.FetchVideoMetadataFromText(titles)
 	if err != nil {
 		log.Printf("Error prefetching videos for titles %v: %v", titles, err) // Log the error with titles for context
 		http.Error(w, fmt.Sprintf("Error prefetching videos: %v", err), http.StatusInternalServerError)
@@ -59,7 +59,7 @@ func Mp3DownloadBulkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var metadata []yt.VideoMetadata
+	var requestData []yt.CombinedData
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -69,15 +69,27 @@ func Mp3DownloadBulkHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Unmarshal the JSON body into the metadata slice
-	if err := json.Unmarshal(body, &metadata); err != nil {
+	// Unmarshal the JSON body into the requestData slice
+	if err := json.Unmarshal(body, &requestData); err != nil {
 		log.Printf("Error unmarshaling request body: %v", err)
 		http.Error(w, "Error processing request body", http.StatusBadRequest)
 		return
 	}
 
-	// Now that you have the metadata, you can pass it to your download function
-	err = yt.DownloadAudioFromMetadata(metadata)
+	// Convert requestData into a slice of CombinedData
+	var combinedDataList []yt.CombinedData
+	for _, data := range requestData {
+		combinedData := yt.CombinedData{
+			VideoMetadata: data.VideoMetadata,
+			UserInput:     data.UserInput,
+		}
+		combinedDataList = append(combinedDataList, combinedData)
+	}
+
+	fmt.Println(combinedDataList)
+
+	// Now that you have the combinedDataList, you can pass it to your download function
+	err = yt.DownloadAudioFromMetadata(combinedDataList)
 	if err != nil {
 		log.Printf("Error downloading audio from metadata: %v", err)
 		http.Error(w, "Error downloading audio", http.StatusInternalServerError)
@@ -128,6 +140,43 @@ func Mp3UpdateMetadataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// For the sake of this example, let's pretend we've updated the metadata
 	// Now, marshal and return the updated metadata
+	updatedMetadataJSON, err := json.Marshal(updatedMetadata)
+	if err != nil {
+		log.Printf("Error marshaling updated metadata: %v", err)
+		http.Error(w, "Error marshaling updated metadata", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(updatedMetadataJSON)
+}
+
+func Mp3UpdateMetadataBulkHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var metadata []yt.VideoMetadata
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading request body: %v", err)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+	fmt.Println(string(body)) // Convert the body to a string to print it
+
+	// Unmarshal the request body into the struct
+	err = json.Unmarshal(body, &metadata)
+	if err != nil {
+		log.Printf("Error unmarshaling JSON: %v", err)
+		http.Error(w, "Error unmarshaling JSON", http.StatusBadRequest)
+		return
+	}
+
+	updatedMetadata, err := yt.FetchMetaDataBulkMp3(metadata)
+
 	updatedMetadataJSON, err := json.Marshal(updatedMetadata)
 	if err != nil {
 		log.Printf("Error marshaling updated metadata: %v", err)

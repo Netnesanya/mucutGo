@@ -14,5 +14,7 @@ func NewRouter() *mux.Router {
 
 	router.HandleFunc("/update-mp3-metadata", Mp3UpdateMetadataHandler).Methods("POST")
 
+	router.HandleFunc("/update-mp3-metadata-bulk", Mp3UpdateMetadataBulkHandler).Methods("POST")
+
 	return router
 }
