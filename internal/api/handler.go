@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func VideoTitlesHandler(w http.ResponseWriter, r *http.Request) {
+func VideoInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
 		return
