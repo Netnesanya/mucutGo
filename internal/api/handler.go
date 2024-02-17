@@ -87,3 +87,54 @@ func Mp3DownloadBulkHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Audio download initiated successfully"))
 }
+
+func Mp3DownloadHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func Mp3UpdateMetadataHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST method is allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var metadata yt.VideoMetadata
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading request body: %v", err)
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+	fmt.Println(string(body)) // Convert the body to a string to print it
+
+	// Unmarshal the request body into the struct
+	err = json.Unmarshal(body, &metadata)
+	if err != nil {
+		log.Printf("Error unmarshaling JSON: %v", err)
+		http.Error(w, "Error unmarshaling JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Process the update (for simplicity, this part is left as a comment)
+	// Here, you might use ytsearch with metadata.OriginalUrl or metadata.Title
+	// and update the metadata accordingly.
+	updatedMetadata, err := yt.FetchMetaDataSingleMp3(metadata)
+	if err != nil {
+		log.Printf("Error fetching metadata for '%s': %v", metadata.Title, err)
+		http.Error(w, "Error fetching metadata", http.StatusInternalServerError)
+		return
+	}
+
+	// For the sake of this example, let's pretend we've updated the metadata
+	// Now, marshal and return the updated metadata
+	updatedMetadataJSON, err := json.Marshal(updatedMetadata)
+	if err != nil {
+		log.Printf("Error marshaling updated metadata: %v", err)
+		http.Error(w, "Error marshaling updated metadata", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(updatedMetadataJSON)
+}

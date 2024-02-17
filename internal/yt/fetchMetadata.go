@@ -100,3 +100,33 @@ func writeMetadataToFile(metadataList []VideoMetadata, filePath string) error {
 	log.Printf("Metadata successfully written to %s\n", filePath)
 	return nil
 }
+
+func FetchMetaDataSingleMp3(metadata VideoMetadata) (VideoMetadata, error) {
+	searchQuery := metadata.Title // Default to using the title
+	if metadata.OriginalUrl != "" {
+		searchQuery = metadata.OriginalUrl // If OriginalUrl is not empty, use it instead
+	}
+
+	cmdArgs := []string{
+		"--default-search", "ytsearch1:", // Limit to the first search result
+		"--dump-json",   // Get the output in JSON format
+		"--no-playlist", // Ensure only single video info is returned
+		searchQuery,     // Use the selected query
+	}
+
+	cmd := exec.Command("yt-dlp", cmdArgs...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Error executing yt-dlp for '%s': %v", searchQuery, err)
+		return VideoMetadata{}, err // Return an empty VideoMetadata and the error
+	}
+
+	var videoMeta VideoMetadata
+	err = json.Unmarshal(output, &videoMeta)
+	if err != nil {
+		log.Printf("Error unmarshaling JSON for '%s': %v", searchQuery, err)
+		return VideoMetadata{}, err // Return an empty VideoMetadata and the error
+	}
+
+	return videoMeta, nil
+}
