@@ -1,13 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"log"
-	"mucutGo/internal/yt"
 	"net/http"
-	"strings"
 )
 
 func NewRouter() *mux.Router {
@@ -39,45 +36,13 @@ var upgrader = websocket.Upgrader{
 
 var connections = make(map[*websocket.Conn]bool)
 
-// VideoInfoWebSocketHandler replaces VideoInfoHandler for WebSocket usage
-func VideoInfoWebSocketHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Upgrade error:", err)
-		return
-	}
-	defer conn.Close()
-
-	for {
-		messageType, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("Read error:", err)
-			break
-		}
-
-		// Assuming the message is a newline-delimited list of titles.
-		titles := strings.Split(string(message), "\n")
-		for _, title := range titles {
-			// Fetch metadata for each title individually.
-			metadata, err := yt.FetchVideoMetadataFromText([]string{title})
-			if err != nil {
-				log.Printf("Error fetching video metadata for title %s: %v", title, err)
-				// Optionally, send an error message back to the client.
-				continue
-			}
-
-			// Send back the metadata as soon as it's fetched.
-			responseData, err := json.Marshal(metadata)
-			if err != nil {
-				log.Printf("Error marshaling metadata for title %s: %v", title, err)
-				// Optionally, send an error message back to the client.
-				continue
-			}
-
-			if err := conn.WriteMessage(messageType, responseData); err != nil {
-				log.Println("Write error:", err)
-				break
-			}
+func BroadcastMessage(message string) {
+	for conn := range connections {
+		if err := conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+			log.Printf("Error broadcasting message to a connection: %v", err)
+			// Optionally, handle disconnection
+			conn.Close()
+			delete(connections, conn)
 		}
 	}
 }

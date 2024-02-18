@@ -2,6 +2,8 @@ package yt
 
 import (
 	"fmt"
+	"log"
+	"mucutGo/internal/service"
 	"os/exec"
 )
 
@@ -62,7 +64,7 @@ func max(a, b float32) float32 {
 	return b
 }
 
-func DownloadAudioSegment(url string, startTime, endTime float32, outputPath string) error {
+func DownloadAudioSegment(url string, startTime, endTime float32, outputPath string, sendMessage service.MessageCallback) error {
 	if url == "" {
 		return fmt.Errorf("URL is empty, cannot download segment")
 	}
@@ -82,6 +84,11 @@ func DownloadAudioSegment(url string, startTime, endTime float32, outputPath str
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to download audio segment: %s, error: %v", string(output), err)
+	} else {
+		successMessage := fmt.Sprintf("Successfully downloaded audio segment: %s", outputPath)
+		if err := sendMessage(successMessage); err != nil {
+			log.Printf("Failed to send success message: %v", err)
+		}
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"mucutGo/internal/service"
 	"os/exec"
 	"strings"
 )
@@ -72,7 +73,7 @@ func FetchVideoMetadataFromText(titles []string) ([]VideoMetadata, error) {
 	return metadataList, nil
 }
 
-func DownloadAudioFromMetadata(combinedDataList []CombinedData) error {
+func DownloadAudioFromMetadata(combinedDataList []CombinedData, sendMessage service.MessageCallback) error {
 	var errorMessages []string // Collect error messages here
 
 	defaultDuration := float32(35) // Default duration in seconds, adjust as needed
@@ -106,7 +107,7 @@ func DownloadAudioFromMetadata(combinedDataList []CombinedData) error {
 		outputPath := fmt.Sprintf("downloads/%s", fileName)
 
 		log.Printf("Downloading audio segment for '%s' from %.2f to %.2f", combinedData.VideoMetadata.Title, startTime, endTime)
-		err := DownloadAudioSegment(combinedData.VideoMetadata.OriginalUrl, startTime, endTime, outputPath)
+		err := DownloadAudioSegment(combinedData.VideoMetadata.OriginalUrl, startTime, endTime, outputPath, sendMessage)
 		if err != nil {
 			errorMessage := fmt.Sprintf("Error downloading audio segment for '%s': %v", combinedData.VideoMetadata.Title, err)
 			log.Print(errorMessage)

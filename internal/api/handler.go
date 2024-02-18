@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"mucutGo/internal/siq"
+	websocketmanager "mucutGo/internal/websocket"
 	"mucutGo/internal/yt"
 	"net/http"
 	"strings"
@@ -89,8 +90,15 @@ func Mp3DownloadBulkHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(combinedDataList)
 
+	sendMessage := func(msg string) error {
+		// This assumes you have a way to access the WebSocket connection here
+		// If not, you'll need to establish a pattern to access the relevant WebSocket connection
+		websocketmanager.GetInstance().BroadcastMessage(msg)
+		return nil
+	}
+
 	// Now that you have the combinedDataList, you can pass it to your download function
-	err = yt.DownloadAudioFromMetadata(combinedDataList)
+	err = yt.DownloadAudioFromMetadata(combinedDataList, sendMessage)
 	if err != nil {
 		log.Printf("Error downloading audio from metadata: %v", err)
 		http.Error(w, "Error downloading audio", http.StatusInternalServerError)
@@ -202,4 +210,49 @@ func Mp3UpdateMetadataBulkHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(updatedMetadataJSON)
+}
+
+func VideoInfoWebSocketHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	websocketmanager.GetInstance().AddConnection(conn)
+	defer websocketmanager.GetInstance().RemoveConnection(conn)
+
+	for {
+		messageType, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("Read error:", err)
+			break
+		}
+
+		// Assuming the message is a newline-delimited list of titles.
+		titles := strings.Split(string(message), "\n")
+		for _, title := range titles {
+			// Fetch metadata for each title individually.
+			metadata, err := yt.FetchVideoMetadataFromText([]string{title})
+			if err != nil {
+				log.Printf("Error fetching video metadata for title %s: %v", title, err)
+				// Optionally, send an error message back to the client.
+				continue
+			}
+
+			// Send back the metadata as soon as it's fetched.
+			responseData, err := json.Marshal(metadata)
+			if err != nil {
+				log.Printf("Error marshaling metadata for title %s: %v", title, err)
+				// Optionally, send an error message back to the client.
+				continue
+			}
+
+			if err := conn.WriteMessage(messageType, responseData); err != nil {
+				log.Println("Write error:", err)
+				break
+			}
+		}
+	}
 }
