@@ -35,6 +35,8 @@ type CombinedData struct {
 
 // FetchVideoMetadataFromText takes a list of video titles and fetches their metadata using yt-dlp.
 func FetchVideoMetadataFromText(titles []string) ([]VideoMetadata, error) {
+	fmt.Println(titles)
+
 	var metadataList []VideoMetadata
 
 	for _, title := range titles {
