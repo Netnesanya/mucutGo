@@ -3,11 +3,13 @@ package siq
 import (
 	"archive/zip"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"log"
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -71,10 +73,9 @@ func addFileToZip(zipWriter *zip.Writer, filePath, baseInZip string) error {
 }
 
 // CreateSIQPackage function now has hardcoded paths
-func CreateSIQPackage() error {
+func CreateSIQPackage(siqName string) error {
 	sourceDir := "./downloads" // Adjust the path as necessary
-	targetZipFile := "./quiz_package.siq"
-	//processedDir := "./processed"
+	targetZipFile := fmt.Sprintf("./%s.siq", siqName)
 
 	files, err := os.ReadDir(sourceDir)
 	if err != nil {
@@ -90,33 +91,37 @@ func CreateSIQPackage() error {
 	archive := zip.NewWriter(zipFile)
 	defer archive.Close()
 
-	// Assume a single theme and round for simplicity
-	pkg := Package{Name: "Quiz Package", Rounds: []Round{{Name: "Round 1", Themes: []Theme{{Name: "♫"}}}}}
+	pkg := Package{Name: siqName, Rounds: []Round{{Name: "Round 1"}}}
+	var questions []Question
 
 	for _, file := range files {
 		filename := file.Name()
 		filePath := filepath.Join(sourceDir, filename)
 
 		if !file.IsDir() && strings.HasSuffix(filename, ".mp3") {
-			// Directly use URL-encoded filename, without adding "Audio/" prefix
 			encodedFilename := url.PathEscape(filename)
-
 			if err := addFileToZip(archive, filePath, encodedFilename); err != nil {
 				log.Printf("Failed to add file %s to ZIP: %v", filename, err)
 				continue
 			}
 
-			// Constructing question using encoded file name directly, without prefix
 			question := Question{
-				Price: 1,
-				Scenario: []Atom{{
-					Type: "voice",
-					Text: "@" + encodedFilename, // Directly use encoded filename
-				}},
-				Right: []string{strings.TrimSuffix(filename, filepath.Ext(filename))},
+				Price:    1,
+				Scenario: []Atom{{Type: "voice", Text: "@" + encodedFilename}},
+				Right:    []string{sanitizeRightAnswer(strings.TrimSuffix(filename, filepath.Ext(filename)))},
 			}
-			pkg.Rounds[0].Themes[0].Questions = append(pkg.Rounds[0].Themes[0].Questions, question)
+			questions = append(questions, question)
 		}
+	}
+
+	// Split questions into groups of 10 for each theme
+	for i := 0; i < len(questions); i += 10 {
+		end := i + 10
+		if end > len(questions) {
+			end = len(questions)
+		}
+		themeName := fmt.Sprintf("%d", i/10+1)
+		pkg.Rounds[0].Themes = append(pkg.Rounds[0].Themes, Theme{Name: themeName, Questions: questions[i:end]})
 	}
 
 	contentFile, err := archive.Create("content.xml")
@@ -131,4 +136,18 @@ func CreateSIQPackage() error {
 	}
 
 	return nil
+}
+
+func sanitizeRightAnswer(filename string) string {
+	// Create a regular expression to find the phrases.
+	// This pattern looks for the phrases "official video", "lyrics video", or "lyrics", case-insensitive.
+	re := regexp.MustCompile(`\((?i).*?(official|lyrics|lyric video|official video).*?\)|\[(?i).*?(official|lyrics|lyric|video).*?\]`)
+
+	// Replace occurrences of the pattern with an empty string.
+	cleanedFilename := re.ReplaceAllString(filename, "")
+
+	// Trim any extra spaces that may have been left as a result of the replacement.
+	cleanedFilename = strings.TrimSpace(cleanedFilename)
+
+	return cleanedFilename
 }

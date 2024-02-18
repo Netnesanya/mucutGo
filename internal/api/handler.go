@@ -158,7 +158,10 @@ func CreateSiqHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := siq.CreateSIQPackage()
+	query := r.URL.Query()
+	siqName := query.Get("name") // "name" to match the query parameter
+
+	err := siq.CreateSIQPackage(siqName)
 	if err != nil {
 		fmt.Println("Error creating package.siq", err)
 	}
