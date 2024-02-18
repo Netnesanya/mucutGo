@@ -43,46 +43,41 @@ var connections = make(map[*websocket.Conn]bool)
 func VideoInfoWebSocketHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println("Upgrade:", err)
+		log.Println("Upgrade error:", err)
 		return
 	}
 	defer conn.Close()
-	connections[conn] = true // Track the new connection
-
-	log.Println("WebSocket connection established")
 
 	for {
-		if _, ok := connections[conn]; !ok {
-			// If the connection is not tracked, ignore processing
-			continue
-		}
-
-		_, message, err := conn.ReadMessage()
+		messageType, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			log.Println("Read error:", err)
 			break
 		}
-		log.Printf("Received message: %s\n", message)
 
-		// Process the message as you would process the body in VideoInfoHandler
+		// Assuming the message is a newline-delimited list of titles.
 		titles := strings.Split(string(message), "\n")
-		metadata, err := yt.FetchVideoMetadataFromText(titles)
-		if err != nil {
-			log.Printf("Error prefetching videos: %v", err)
-			// Optionally, send an error message back to the client
-			continue
-		}
+		for _, title := range titles {
+			// Fetch metadata for each title individually.
+			metadata, err := yt.FetchVideoMetadataFromText([]string{title})
+			if err != nil {
+				log.Printf("Error fetching video metadata for title %s: %v", title, err)
+				// Optionally, send an error message back to the client.
+				continue
+			}
 
-		responseData, err := json.Marshal(metadata)
-		if err != nil {
-			log.Printf("Error marshaling metadata: %v", err)
-			// Optionally, send an error message back to the client
-			continue
-		}
+			// Send back the metadata as soon as it's fetched.
+			responseData, err := json.Marshal(metadata)
+			if err != nil {
+				log.Printf("Error marshaling metadata for title %s: %v", title, err)
+				// Optionally, send an error message back to the client.
+				continue
+			}
 
-		if err := conn.WriteMessage(websocket.TextMessage, responseData); err != nil {
-			log.Println("write:", err)
-			break
+			if err := conn.WriteMessage(messageType, responseData); err != nil {
+				log.Println("Write error:", err)
+				break
+			}
 		}
 	}
 }

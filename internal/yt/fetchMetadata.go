@@ -65,9 +65,9 @@ func FetchVideoMetadataFromText(titles []string) ([]VideoMetadata, error) {
 	}
 
 	// Consider error handling if no metadata could be fetched.
-	if len(metadataList) == 0 {
-		return nil, fmt.Errorf("no metadata could be fetched for the given titles")
-	}
+	//if len(metadataList) == 0 {
+	//	return nil, fmt.Errorf("no metadata could be fetched for the given titles")
+	//}
 
 	return metadataList, nil
 }
