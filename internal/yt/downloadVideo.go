@@ -7,7 +7,8 @@ import (
 
 func FindHeatmapSpike(heatmap []VideoHeatmap, duration float32, cutDuration *float32) (startTime, endTime float32) {
 	if len(heatmap) == 0 {
-		return 0, 0 // Return immediately if heatmap is empty
+		startTime := (duration / 2) - *cutDuration/2
+		return startTime, startTime + *cutDuration/2 // Return immediately if heatmap is empty
 	}
 
 	var maxSpike VideoHeatmap
@@ -65,6 +66,8 @@ func DownloadAudioSegment(url string, startTime, endTime float32, outputPath str
 	if url == "" {
 		return fmt.Errorf("URL is empty, cannot download segment")
 	}
+
+	fmt.Println(url, startTime, endTime, outputPath)
 
 	cmdArgs := []string{
 		url,
