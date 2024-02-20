@@ -12,7 +12,7 @@ func main() {
 	const address = ":8080"
 
 	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type"})
-	originsOk := handlers.AllowedOrigins([]string{"http://localhost:1420"}) // Adjust the port to match your Tauri app's port
+	originsOk := handlers.AllowedOrigins([]string{"*", "https://netnesanya.github.io"}) // Adjust the port to match your Tauri app's port
 	methodsOk := handlers.AllowedMethods([]string{"GET", "POST", "OPTIONS"})
 
 	// Wrap your router with CORS middleware
